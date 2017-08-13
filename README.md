@@ -1,2 +1,2 @@
 # DynaVar
-User-defined data-type (object) in C++, which can hold any data-type. Complete with operator overloading. 
+DynaVar is a project, written wholly in C++, whose main objective is to create a user-defined data structure capable of storing all primitive data-types.  

@@ -3,7 +3,7 @@ DynaVar is a project, written wholly in C++, whose main objective is to create a
 
 This project started out as an experimental program which later grew into a full-fledged project aiming to solve a particular problem faced by programmers everywhere. Programmers, especially beginners, always falter when it comes to data-types and type-casting. In languages like C, where there are no built-in data types for Strings and Booleans, the learning-curve can be quite high. Character arrays, enumerated types, type-casting and similar problems could prove to be a significant hindrance to programmers who are learning afresh.
 
-This project could help with these problems by providing a common 'data-type' for all variables. By abstracting what goes on in the background, DynaVar could help programmers focus on the more important concepts at hand. 
+This project could help with these problems by providing a common 'data-type' for all variables. From floats to longs to strings, anything can be stored in the object. By abstracting what goes on in the background, DynaVar could help programmers focus on the more important concepts at hand. 
 
 To paraphrase JRR Tolkien:
 > One object to rule them all.

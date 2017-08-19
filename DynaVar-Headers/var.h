@@ -83,33 +83,33 @@ public:
 		switch(gType){
 			case 2: type=2;
 			
-					if(allocated==1){
-						delete string;
-						allocated=0;
-					}
+				if(allocated==1){
+					delete string;
+					allocated=0;
+				}
 			
-					string=new char[1];
-					string[0]=input[0];
-					string[1]='\0';
+				string=new char[1];
+				string[0]=input[0];
+				string[1]='\0';
 			
-					allocated=1;
-					break;
+				allocated=1;
+				break;
 					
 			case 3: type=3;
-					floating=toFloat(input);
-					break;
+				floating=toFloat(input);
+				break;
 					
 			case 4: type=4;
-					longfloat=toDouble(input);
-					break;
+				longfloat=toDouble(input);
+				break;
 			
 			case 5: type=5;
-					number=toInt(input);
-					break;
+				number=toInt(input);
+				break;
 			
 			case 6: type=6;
-					longint=toLong(input);
-					break;
+				longint=toLong(input);
+				break;
 		}
 	}
 	void toString(){

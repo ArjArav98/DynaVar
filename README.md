@@ -18,12 +18,7 @@ or
 * IDE supporting C++ (Dev C++, Xcode, Turbo C++)
 
 ### Installation
-1. Download the contents of the 'DynaVar-Headers' folder. There should be 3 ```.h``` files:
-```
-var.h
-templates.h
-functions.h
-```
+1. Download the contents of the 'DynaVar-Headers' folder. There should be a file titled ```var.h```.
 2. Move these files to the directory in which your C++ file or ```.cpp``` file is located.
 3. At the starting of your file, include the ```var.h``` header file. 
 ```
@@ -32,7 +27,7 @@ functions.h
 .....
 ````
 Like that^.
-4. You should now be able to use the ```var``` object in your own programmes. The object should satisfy most of your requirements, however, it has a few limitations and there are still some features to be added. To see the full list of available features, how-to and documentation, see the DynaVar wiki. 
+4. You should now be able to use the ```var``` object in your own programs. The object should satisfy most of your requirements, however, it has a few limitations and there are still some features to be added. To see the full list of available features, how-to and documentation, scroll down below (currently ongoing). 
 
 ### Sample Program
 #### #1
@@ -66,7 +61,7 @@ int main(){
 	cin>>limit;
 	
 	var i;
-	for(i=0; i<limit; i++){
+	for(i=0.0; i<limit; i++){
 		if(i%3==0) cout<<i<<" is divisible by 3\n";
 	}
 	
@@ -90,11 +85,6 @@ int main(){
 	if(name1==name2) cout<<"The names are the same\n";
 	else cout<<"The names are different\n";
 	
-	name1.destroy();
-	name2.destroy();
-	/*If a variable contains or ever contained a 'string' durint the course of the program, 
-  the destroy() func must be invoked.*/
-	
 	return 0;
 }
 ```
@@ -108,5 +98,5 @@ These are a few sample programs to give a basic understanding of how the ```var`
 * Arjun Aravind
 
 ### Acknowledgements
-* Thanks to Divya G, for input on the usage of templates.
+* Thanks to Divya G, for input on the usage of templates in v1.0.
 * Stack Overflow

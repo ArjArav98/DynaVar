@@ -1,2741 +1,971 @@
+// ====================
+// = PyPlusPlus - var =
+// ====================
+//
+//  Created by Arjun Aravind on 2018-01-01.
+//  Copyright 2018 Arjun Aravind. All rights reserved.
+//
+
 #include<iostream>
-#include"functions.h"
-#include"templates.h"
 using namespace std;
 
-class var{
-public:	
-	int type, allocated;
-	int number;
-	float floating;
-	long longint;
-	double longfloat;
-	char* string;
-	
-	var(const char* input){
-		initValues();
-		
-		allocated=0;
-		int length=stringlen(input), i;
-		string=new char[length];
-		
-		if(length>1) type=1;
-		else type=2;
-		
-		for(i=0; i<length; i++) string[i]=input[i];
-		string[length]='\0';
-		
-		allocated=1;
-	}
-	var(char c){
-		initValues();
-		
-		type=2;
-		string=new char[1];
-		
-		string[0]=c;
-		string[1]='\0';
-		
-		allocated=1;
-	}
-	var(float f){
-		initValues();
-		
-		allocated=0;
-		type=3;
-		floating=f;
-	}
-	var(double d){
-		initValues();
-		
-		allocated=0;
-		type=4;
-		longfloat=d;
-	}
-	var(int num){
-		initValues();
-		
-		allocated=0;
-		type=5;
-		number=num;
-	}
-	var(long l){
-		initValues();
-		
-		allocated=0;
-		type=6;
-		longint=l;
-	}
-	var(){
-		initValues();
-		allocated=0;
-	}
-	
-	void destroy(){
-		if(allocated==1){
-			delete string;
-			allocated=0;
-		}
-	}
-	void input(const char* input){
-		int gType=getType(input);
-		
-		switch(gType){
-			case 2: type=2;
-			
-					if(allocated==1){
-						delete string;
-						allocated=0;
-					}
-			
-					string=new char[1];
-					string[0]=input[0];
-					string[1]='\0';
-			
-					allocated=1;
-					break;
-					
-			case 3: type=3;
-					floating=toFloat(input);
-					break;
-					
-			case 4: type=4;
-					longfloat=toDouble(input);
-					break;
-			
-			case 5: type=5;
-					number=toInt(input);
-					break;
-			
-			case 6: type=6;
-					longint=toLong(input);
-					break;
-		}
-	}
-	void toString(){
-		try{
-			switch(type){
-				case 1:  throw "var is already of type string!"; break;
-				case 2:  throw "var is already of type char!"; break;
-				case 3:
-					type=1;
-					if(allocated==1){
-						delete string;
-						allocated=0;
-					}
-					string=::toString(string, floating);
-					break;
-					
-				case 4:
-					type=1;
-					if(allocated==1){
-						delete string;
-						allocated=0;
-					}
-					string=::toString(string, longfloat);
-					break;
-					
-				case 5:
-					type=1;
-					if(allocated==1){
-						delete string;
-						allocated=0;
-					}
-					string=::toString(string, number);
-					break;
-					
-				case 6:
-					type=1;
-					if(allocated==1){
-						delete string;
-						allocated=0;
-					}
-					string=::toString(string, longint);
-					break;
-				
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void initValues(){
-		number=0;
-		floating=0;
-		longint=0;
-		longfloat=0;
-	}
-	
-	void operator=(var var1){
-		if(var1.type==1){
-			type=var1.type;
-			int length=stringlen(var1.string), i;
-			
-			destroy();
-			string=new char[length];
+#define STR_SIZE 100
+#define _INT 1 /* This is a misnomer. All values are double values. */
+#define _STR 2
+#define _NONE 0
+#define YES 1
+#define NO 0
 
-			for(i=0; i<length; i++){
-				string[i]=var1.string[i];
-			}
-		}
-		else if(var1.type==2){
-			type=2;
-			if(allocated==1){
-				delete string;
-				allocated=0;
-			}
-			string=new char[1];
-			string[0]=var1.string[0];
-			string[1]='\0';
-		}
-		else if(var1.type==3){
-			type=3;
-			floating=var1.floating;
-		}
-		else if(var1.type==4){
-			type=4;
-			longfloat=var1.longfloat;
-		}
-		else if(var1.type==5){
-			type=5;
-			number=var1.number;
-		}
-		else if(var1.type==6){
-			type=6;
-			longint=var1.longint;
-		}
+class var{
+
+/* Class Data Members */
+	union Value{
+		double d;
+		char* c;
+	};
+	
+	public: unsigned short int type;
+	unsigned short int allocated;
+	public: Value val;
+	
+/* Constructors and Destructors */
+	public: var(){
+		/* The constructor sets the allocation and type variables to the default values. (See Macro Definitions) */
+			allocated=NO;
+			type=_NONE;
 	}
-	void operator=(float f){
-		type=3;
-		floating=f;
+	public: var(double num){
+		/* If a number is passed in, this function will store it in the 'double' variable inside the union. If any allocation has taken place, it is freed. The 'type' variable is accordingly updated. */
+			setDefaultsAndFree();
+			val.d=num;
+			type=_INT;
 	}
-	void operator=(const char* input){
-		if(allocated==1){
-			delete string;
-			allocated=0;
-		}
-		int length=stringlen(input);
-		string=new char[length];
+	public: var(const char* string){
+		/* If string is passed, this constructor executes. First, allocated memory is freed and defaults are restored. The string argument is copied into the 'char' variable in the union. Type and Allocation variables are updated.*/
+			setDefaultsAndFree();
+			int len=length(string), i;
 		
-		if(length==1) type=2;
-		else type=1;
+			val.c=new char[len];
+			for(i=0; i<len; i++) val.c[i]=string[i];
+		
+			allocated=YES;
+			type=_STR;
+	}
+	public: var(const var &v){
+		if(v.type==_INT) setNum(v.val.d);
+		else if(v.type==_STR) setString(v.val.c);
+	}
+	public: ~var(){
+		/* The destructor calls the sDaF() (abbr.) which frees allocated memory and sets defaults. */
+			setDefaultsAndFree();
+	}
+	
+/* Utility functions used internally */	
+	private: void setDefaultsAndFree(){
+		/* This function frees memory if dynamic allocation has occured. It also sets 'allocated' and 'type' variables to their default values. */
+			if(allocated==YES){
+				delete val.c;
+				val.c=NULL;
+			}
+			allocated=NO;
+			type=_NONE;
+	}
+	
+	private: int getType(const char* string){
+		/* This function analyzes the string passed in and determines whether it is a string or a number. */
+			int len=length(string);
+			int i, point=0;
+		
+			for(i=0; i<len; i++){
+				if(string[i]<='9' && string[i]>='0'); /* If character is a number, nothing happens */
+				else if(string[i]=='.'){
+					if(point==1) return _STR; /* if only one point is present, then num. Otherwise, it is a string. */
+					else point++;
+				}
+				else return _STR; /* if the character is not a number or a point, the entire string is a 'string' */
+			}
+			return _INT;
+	}
+	public: int Type(){
+		return type;
+	}
+	
+	private: double getNum(const char* input){
+		/* This function converts the given string into a double which is then returned. */
+			double num=0;
+			int i, len=length(input), placesAfterPoint=0;
+	
+			for(i=0; ((input[i]!='.') && (i<len)); i++){
+				num*=10.0;
+				double digit=9-('9'-input[i]);
+				num+=digit;
+			}
+	
+			i++;
+			double afterPoint=0;
+			for(;i<len; i++){
+				afterPoint*=10.0;
+				double digit=9-('9'-input[i]);
+				afterPoint+=digit;
+				placesAfterPoint++;
+			}
+	
+			for(i=0; i<placesAfterPoint; i++){
+				afterPoint/=10.0;
+			}
+	
+			return (num+afterPoint);
+	}
+	private: char* getString(double num){
+		/*We need to first seperate the whole number and the decimal number. We then make the decimal number into a whole number by multiplying it. We then get the length of these two numbers. After that, we divide them one by one and add them to the string as ascii values.*/
+		long wholeNum=num, decimalNumTest; /* Step 1 */
+		double decimalNum=num-wholeNum;
+		
+		while(true){  /* Step 2 */
+			decimalNum*=10;
+			decimalNumTest=(decimalNum+1);
+			if(decimalNumTest%10==0){
+				decimalNumTest/=10;
+				break;
+			}
+		}
+		
+		int countWhole, countDecimal;
+		long wholeNumDup=wholeNum, decimalNumTestDup=decimalNumTest;
+		
+		for(countWhole=0; wholeNumDup!=0; countWhole++, wholeNumDup/=10);
+		for(countDecimal=0; decimalNumTestDup!=0; countDecimal++, decimalNumTestDup/=10);
+		
+		char* string=new char[countWhole+countDecimal+1];
 		
 		int i;
-		for(i=0; i<length; i++){
-			string[i]=input[i];
-		}
+		for(i=(countWhole-1); wholeNum!=0; i--, wholeNum/=10) string[i]='0'+(wholeNum%10);
+		for(i=(countWhole+countDecimal); decimalNumTest!=0; i--, decimalNumTest/=10) string[i]='0'+(decimalNumTest%10);
+		string[countWhole]='.';
 		
-		i++;
-		string[i]='\0';
+		cout<<"the string is "<<string<<endl;
 		
-		allocated=1;
+		return string;
 	}
-	void operator=(char c){
-		if(allocated==1){
-			delete string;
-			allocated=0;
-		}
-		
-		string=new char[1];
-		string[0]=c;
-		allocated=1;
-		
-		type=2;
+
+	private: void setNum(double num){
+		setDefaultsAndFree();
+		val.d=num;
+		type=_INT;
 	}
-	void operator=(int num){
-		type=5;
-		number=num;
+	public: void setString(const char* string){
+		/* If string is passed, this constructor executes. First, allocated memory is freed and defaults are restored. The string argument is copied into the 'char' variable in the union. Type and Allocation variables are updated.*/
+			setDefaultsAndFree();
+			int len=length(string), i;
+			
+			char* str=new char[len];
+			
+			for(i=0; i<len; i++) str[i]=string[i];
+			for(i=0; i<length(str); i++) str[i]=string[i];
+			
+			val.c=str;
+			
+			allocated=YES;
+			type=_STR;
 	}
-	void operator=(double d){
-		type=4;
-		longfloat=d;
-	}
-	void operator=(long l){
-		type=6;
-		longint=l;
-	}
-	
-	var operator+(var var2){
-		var var3;
-		try{
-			if(type==var2.type){
-				switch(type){
-					case 1:
-						if(var3.allocated==1){
-							delete var3.string;
-							var3.allocated=0;
-						}
-						var3.string=stringcat(string, var2.string);
-						var3.type=1;
-						break;
-					case 2: throw "[cannot add variable of type 'char' with char. Only one character can be stored at a time]";
-							break;
-					case 3: var3.type=3;
-							var3.floating=floating+var2.floating; break;
-					case 4: var3.type=4;
-							var3.longfloat=longfloat+var2.longfloat; break;
-					case 5: var3.type=5;
-							var3.number=number+var2.number; break;
-					case 6: var3.type=6;
-							var3.longint=longint+var2.longint; break;	
-				}
-			}
-			else{
-				if((type==3)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=floating+var2.longfloat;
-				}
-				else if((type==3)&&(var2.type==5)){
-					var3.type=3;
-					var3.floating=floating+var2.number;
-				}
-				else if((type==3)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=floating+var2.longint;
-				}
-				
-				else if((type==4)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longfloat+var2.floating;
-				}
-				else if((type==4)&&(var2.type==5)){
-					var3.type=4;
-					var3.longfloat=longfloat+var2.number;
-				}
-				else if((type==4)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=longfloat+var2.longint;
-				}
-				
-				else if((type==5)&&(var2.type==3)){
-					var3.type=3;
-					var3.floating=number+var2.floating;
-				}
-				else if((type==5)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=number+var2.longfloat;
-				}
-				else if((type==5)&&(var2.type==6)){
-					var3.type=6;
-					var3.longint=number+var2.longint;
-				}
-				
-				else if((type==6)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longint+var2.floating;
-				}
-				else if((type==6)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=longint+var2.longfloat;
-				}
-				else if((type==6)&&(var2.type==5)){
-					var3.type=6;
-					var3.longint=longint+var2.number;
-				}
-				
-				else throw "[Incompatibles Types] These types cannot be added";
-			}
-		}catch(const char* exception){
-			cout<<"Cannot add --> "<<exception<<endl;
-		}
-		return var3;
-	}
-	var operator+(int num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "[Incompatible Types] Cannot add String and Int values!"; break;
-				case 2: throw "[Incompatible Types] Cannot add String and Int values!"; break;
-				case 3: var1.type=3;
-						var1.floating=floating+num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat+num; break;
-				case 5: var1.type=5;
-						var1.number=number+num; break; 
-				case 6: var1.type=6;
-						var1.longint=longint+num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator+(float num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "Cannot add String and Float values! [Incompatible Types]"; break;
-				case 2: throw "Cannot add Char and Float values! [Incompatible Types]"; break;
-				case 3: var1.type=3; 
-						var1.floating=floating+num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat+num; break;
-				case 5: var1.type=3;
-						var1.floating=number+num; break;
-				case 6: var1.type=4;
-						var1.longfloat=longint+num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator+(double num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "Cannot add String and Double values! [Incompatible Types]"; break; 
-				case 2: throw "Cannot add Char and Double values! [Incompatible Types]"; break; 
-				case 3: var1.type=4;
-						var1.longfloat=floating+num; break; 
-				case 4: var1.type=4;
-						var1.longfloat=longfloat+num; break; 
-				case 5: var1.type=4;
-						var1.longfloat=number+num; break; 
-				case 6: var1.type=4;
-						var1.longfloat=longint+num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator+(long num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "Cannot add String and Long values! [Incompatible Types]"; break;
-				case 2: throw "Cannot add Char and Long values! [Incompatible Types]"; break;
-				case 3: var1.type=4;
-						var1.longfloat=floating+num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat+num; break;
-				case 5: var1.type=6;
-						var1.longint=number+num; break; 
-				case 6: var1.type=6;
-						var1.longint=longint+num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	
-	void operator+=(var var2){
-		char* stringcopy;
-		if(type==var2.type){
-			switch(type){
-				case 1:
-					if(allocated==1){
-						stringcopy=new char[stringlen(string)];
-						stringcopy=stringcpy(stringcopy, string);
-						delete string;
-					
-						string=stringcat(stringcopy, var2.string);
-						delete stringcopy;
-					
-						allocated=1;
-					}
-					else{
-						string=stringcpy(string, var2.string);
-						allocated=1;
-					}
-					break;
-				case 2: throw "[Cannot add var of type 'char' to char. Can only store one char at a time.]"; break;
-				case 3: floating+=var2.floating; break; 
-				case 4: longfloat+=var2.longfloat; break; 
-				case 5: number+=var2.number; break; 
-				case 6: longint+=var2.longint; break;
-			}
+	private: void appendString(const char* string){
+		if(allocated==YES){
+			int len1=length(val.c), len2=length(string), i, j;
+			char* str=new char[len1+len2];
+			
+			for(i=0, j=0; i<len1; i++, j++) str[j]=val.c[i];
+			for(i=0; i<len2; i++, j++) str[j]=string[i];
+			
+			setString(str);
 		}
 		else{
-			try{
-				switch(type){
-				case 1:
-					if(var2.type==2){
+			int len1=length(string), i;
+			char* str=new char[len1];
 			
-						if(allocated==1){
-							stringcopy=new char[stringlen(string)];
-							stringcopy=stringcpy(stringcopy, string);
-							delete string;
-				
-							string=stringcat(stringcopy, var2.string);
-							delete stringcopy;
-				
-							allocated=1;
-						}
-						else{
-							string=stringcpy(string, var2.string);
-							allocated=1;
-						}
-						break;
-					}
-					else{
-						throw "[Incompatible Types] You cannot add these two types together!";
-					}
-					break;
-				
-				case 2: throw "[Cannot add var of type 'char' to char. Can only store one char at a time.]"; break;
-					
-				case 3:
-					if(var2.type==4){
-						type=4;
-						longfloat=floating+var2.longfloat;
-						break;
-					}
-					else if(var2.type==5){
-						type=3;
-						floating=floating+var2.number;
-						break;
-					}
-					else if(var2.type==6){
-						type=4;
-						longfloat=floating+var2.longint;
-						break;
-					}
-				
-				case 4:
-					if(var2.type==3){
-						type=4;
-						longfloat=longfloat+var2.floating;
-						break;
-					}
-					else if(var2.type==5){
-						type=4;
-						longfloat=longfloat+var2.number;
-						break;
-					}
-					else if(var2.type==6){
-						type=4;
-						longfloat=longfloat+var2.longint;
-						break;
-					}
-				
-				case 5:
-					if(var2.type==3){
-						type=3;
-						floating=number+var2.floating;
-						break;
-					}
-					else if(var2.type==4){
-						type=4;
-						longfloat=number+var2.longfloat;
-						break;
-					}
-					else if(var2.type==6){
-						type=6;
-						longint=number+var2.longint;
-						break;
-					}
-					
-				case 6:
-					if(var2.type==3){
-						type=4;
-						longfloat=longint+var2.floating;
-						break;
-					}
-					else if(var2.type==4){
-						type=4;
-						longfloat=longint+var2.longfloat;
-						break;
-					}
-					else if(var2.type==5){
-						type=5;
-						longint=longint+var2.number;
-						break;
-					}
-				default:
-					throw "[Incompatible types] You cannot add these two types together!";
-				}
-			}
-			catch(const char* exception){
-				cout<<exception<<endl;
-			}
+			for(i=0; i<len1; i++) str[i]=string[i];
+			
+			setString(str);
 		}
 	}
-	void operator+=(int num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be added"; break;
-			case 2: string[0]+=num; break;
-			case 3: floating+=num; break;
-			case 4: longfloat+=num; break;
-			case 5: number+=num; break;
-			case 6: longint+=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
+	public: char* append(const char* string){
+		if(allocated==YES){
+			int len1=length(val.c), len2=length(string), i, j;
+			char* str=new char[len1+len2];
+			
+			for(i=0, j=0; i<len1; i++, j++) str[j]=val.c[i];
+			for(i=0; i<len2; i++, j++) str[j]=string[i];
+			
+			return str;
+		}
+		else{
+			int len1=length(string), i;
+			char* str=new char[len1];
+			
+			for(i=0; i<len1; i++) str[i]=string[i];
+			
+			return str;
 		}
 	}
-	void operator+=(long num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be added"; break; 
-			case 2: string[0]+=num; break; 
-			case 3: type=4;
-					longfloat=floating;
-					longfloat+=num; break; 
-			case 4: longfloat+=num; break; 
-			case 5: type=6;
-					longint=number;
-					longint+=num; break; 
-			case 6: longint+=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
+	
+	private: int length(const char* string){
+		/* This function returns the length of the given string. */
+			int i=0;
+			for(i=0; string[i]!='\0'; i++);
+			return i;
 	}
-	void operator+=(float num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be added"; break;
-			case 2: num1=num; 
-					string[0]+=num1; break;
-			case 3: floating+=num; break;
-			case 4: longfloat+=num; break;
-			case 5: type=3;
-					floating=number;
-					floating+=num;
-					cout<<"floating is "<<floating<<endl; break;
-			case 6: type=4;
-					longfloat=longint;
-					longfloat+=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
+	private: int strEquals(const char* str1, const char* str2){
+		int len1=length(str1), len2=length(str2);
+		if(len1==len2){
+			int i;
+			for(i=0; i<len1; i++)
+				if(str1[i]!=str2[i]) return 0;
+			return 1;
 		}
+		else return 0;
 	}
-	void operator+=(double num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be added"; break;
-			case 2: num1=num;
-					string[0]+=num1; break;
-			case 3: type=4;
-					longfloat=floating;
-					longfloat+=num; break; 
-			case 4: longfloat+=num; break; 
-			case 5: type=4;
-					longfloat=number;
-					longfloat+=num; break;
-					cout<<"longfloat is "<<longfloat<<endl; break;
-			case 6: type=4;
-					longfloat=longint;
-					longint+=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator+=(const char* input){
-		char* stringcopy;
-		try{
-			if(type==1){
-				if(allocated==1){
-					stringcopy=new char[stringlen(input)];
-					stringcpy(stringcopy, string);
-					
-					delete string;
-					allocated=0;
-					
-					string=stringcat(stringcopy, input);
-					delete stringcopy;
-					allocated=1;
+	public: int strCompare(const char* str1, const char* str2){
+		/* This function compares two strings lexicologically. If the first string is greater lexicologically, then 1 is returned, otherwise, 2 is returned. If the two strings are equal, then 0 is returned. */
+			if(strEquals(str1, str2)==1) return 0;
+			else{
+				int i, len1=length(str1), len2=length(str2);
+				if(len1>len2 || len1==len2){
+					for(i=0; i<len2; i++)
+						if(str2[i]>str1[i])
+							return 2;
+					return 1;
 				}
 				else{
-					string=new char[stringlen(input)];
-					stringcpy(string, input);
-					allocated=1;
+					for(i=0; i<len1; i++)
+						if(str1[i]>str2[i])
+							return 1;
+					return 2;
 				}
 			}
-			else throw "[Incompatibles Types] These types cannot be added";
-			
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
+		
+			return 0;
 	}
 	
-	var operator-(var var2){
-		var var3;
-		try{
-			if(type==var2.type){
-				switch(type){
-					case 1: throw "[Invalid operation] Subtraction cannot be performed on a variable of type 'string'"; break;
-					case 2: var3.type=2;
-						var3.string=new char[1];
-						
-						var3.string[0]=string[0]-var2.string[0];
-						allocated=1;
-						break;
-					case 3: var3.type=3;
-							var3.floating=floating-var2.floating; break;
-					case 4: var3.type=4;
-							var3.longfloat=longfloat-var2.longfloat; break;
-					case 5: var3.type=5;
-							var3.number=number-var2.number; break;
-					case 6: var3.type=6;
-							var3.longint=longint-var2.longint; break;	
-				}
-			}
-			else{
-				if((type==3)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=floating-var2.longfloat;
-				}
-				else if((type==3)&&(var2.type==5)){
-					var3.type=3;
-					var3.floating=floating-var2.number;
-				}
-				else if((type==3)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=floating-var2.longint;
-				}
-				
-				else if((type==4)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longfloat-var2.floating;
-				}
-				else if((type==4)&&(var2.type==5)){
-					var3.type=4;
-					var3.longfloat=longfloat-var2.number;
-				}
-				else if((type==4)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=longfloat-var2.longint;
-				}
-				
-				else if((type==5)&&(var2.type==3)){
-					var3.type=3;
-					var3.floating=number-var2.floating;
-				}
-				else if((type==5)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=number-var2.longfloat;
-				}
-				else if((type==5)&&(var2.type==6)){
-					var3.type=6;
-					var3.longint=number-var2.longint;
-				}
-				
-				else if((type==6)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longint-var2.floating;
-				}
-				else if((type==6)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=longint-var2.longfloat;
-				}
-				else if((type==6)&&(var2.type==5)){
-					var3.type=6;
-					var3.longint=longint-var2.number;
-				}
-				
-				else throw "[Incompatibles Types] These types cannot be added";
-			}
-		}catch(const char* exception){
-			cout<<"Cannot add --> "<<exception<<endl;
-		}
-		return var3;
+/* Operator Overloading Functions */
+	public: void operator=(double num){
+		/* This function overloads the = operator. If a number is passed in, this function will store it in the 'double' variable inside the union. If any allocation has taken place, it is freed. The 'type' variable is accordingly updated. */
+			setDefaultsAndFree();
+			val.d=num;
+			type=_INT;
 	}
-	var operator-(int num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "[Incompatible Types] Cannot subtrat 'string' and 'int' values!"; break;
-				case 2:
-					var1.type=2;
-					var1.string=new char[1];
-				
-					var1.string[0]=string[0]-num;
-					allocated=1;
-					break;
-				case 3: var1.type=3; 
-					var1.floating=floating-num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat-num; break;
-				case 5: var1.type=5;
-						var1.number=number-num; break;
-				case 6: var1.type=6;
-						var1.longint=longint-num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
+	public: void operator=(const char* string){
+		/* We are overloading the = operator. */
+			setString(string);
 	}
-	var operator-(float num){
-		var var1;
-		long num1;
-		try{
-			switch(type){
-				case 1: throw "Cannot add String and Float values! [Incompatible Types]"; break;
-				case 2: var1.type=2;
-					var1.string=new char[1];
-					
-					num1=num;
-					var1.string[0]=string[0]-num1;
-					allocated=1;
-					break;
-				case 3: var1.type=3;
-						var1.floating=floating-num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat-num; break;
-				case 5: var1.type=3;
-						var1.floating=number-num; break;
-				case 6: var1.type=4;
-						var1.longfloat=longint-num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator-(double num){
-		var var1;
-		long num1;
-		try{
-			switch(type){
-				case 1: throw "Cannot subtract String and Double values! [Incompatible Types]"; break;
-				case 2:
-					var1.type=2;
-					var1.string=new char[1];
-				
-					num1=num;
-					var1.string[0]=string[0]-num1;
-					allocated=1;
-					break; 
-				case 3: var1.type=4;
-						var1.longfloat=floating-num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat-num; break;
-				case 5: var1.type=4;
-						var1.longfloat=number-num; break;
-				case 6: var1.type=4;
-						var1.longfloat=longint-num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator-(long num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "Cannot add String and Long values! [Incompatible Types]"; break;
-				case 2:
-					var1.type=2;
-					var1.string=new char[1];
-				
-					var1.string[0]=string[0]-num;
-					allocated=1;
-					break; 
-				case 3: var1.type=4;
-						var1.longfloat=floating-num; break;
-				case 4: var1.type=4; 
-					var1.longfloat=longfloat-num; break;
-				case 5: var1.type=6;
-						var1.longint=number-num; break;
-				case 6: var1.type=6;
-						var1.longint=longint-num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
+	public: void operator=(var &v){
+		/* This function equates two variables together. */
+			if(v.Type()==_INT) setNum(v.val.d);
+			else if(v.Type()==_STR) setString(v.val.c);
 	}
 	
-	void operator-=(var var2){
-		char* stringcopy;
-		if(type==var2.type){
-			switch(type){
-				case 1: throw "[Invalid operation] Subtraction cannot be performed on a variable of type 'string'"; break;
-				case 2: string[0]=string[0]-var2.string[0]; break;
-				case 3: floating-=var2.floating; break; 
-				case 4: longfloat-=var2.longfloat; break;
-				case 5: number-=var2.number; break;
-				case 6: longint-=var2.longint; break;
-			}
-		}
-		else{
+	public: double operator+(double num){
+		/*This function overloads the + operator. This function returns a double which is the sum of the argument and the value of the double of THIS object. If the type of THIS object is not a _INT, an exception is thrown.*/
 			try{
-				long num1;
-				switch(type){
-					case 1: throw "[Invalid operation] Subtraction cannot be performed on a variable of type 'string'";	break;
-				
-					case 2:
-						if(var2.type==3){
-							type=2;
-							num1=var2.floating;
-							string[0]=string[0]-num1;
-							break;
-						}
-						else if(var2.type==4){
-							type=2;
-							num1=var2.longfloat;
-							string[0]=string[0]-num1;
-							break;
-						}
-						else if(var2.type==5){
-							type=2;
-							string[0]=string[0]-var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=2;
-							string[0]=string[0]-var2.longint;
-							break;
-						}
-						break;
-					
-					case 3:
-						if(var2.type==4){
-							type=4;
-							longfloat=floating-var2.longfloat;
-							break;
-						}
-						else if(var2.type==5){
-							type=3;
-							floating=floating-var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=4;
-							longfloat=floating-var2.longint;
-							break;
-						}
-				
-					case 4:
-						if(var2.type==3){
-							type=4;
-							longfloat=longfloat-var2.floating;
-							break;
-						}
-						else if(var2.type==5){
-							type=4;
-							longfloat=longfloat-var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=4;
-							longfloat=longfloat-var2.longint;
-							break;
-						}
-				
-					case 5:
-						if(var2.type==3){
-							type=3;
-							floating=number-var2.floating;
-							break;
-						}
-						else if(var2.type==4){
-							type=4;
-							longfloat=number-var2.longfloat;
-							break;
-						}
-						else if(var2.type==6){
-							type=6;
-							longint=number-var2.longint;
-							break;
-						}
-					
-					case 6:
-						if(var2.type==3){
-							type=4;
-							longfloat=longint-var2.floating;
-							break;
-						}
-						else if(var2.type==4){
-							type=4;
-							longfloat=longint-var2.longfloat;
-							break;
-						}
-						else if(var2.type==5){
-							type=5;
-							longint=longint-var2.number;
-							break;
-						}
-					default:
-						throw "[Incompatible types] You cannot add these two types together!";
-				}
+				if(type==_STR) throw 1;
+				else if(type==_INT) return (val.d + num);
+			} catch (int exception){
+				cout<<"error: cannot perform addition on string and number. Also, make sure that both variables are initialised.\n";
 			}
-			catch(const char* exception){
-				cout<<exception<<endl;
-			}
-		}
+			return -1;
 	}
-	void operator-=(int num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be subtracted"; break;
-			case 2: string[0]-=num; break; 
-			case 3: floating-=num; break; 
-			case 4: longfloat-=num; break; 
-			case 5: number-=num; break; 
-			case 6: longint-=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator-=(long num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be subtracted"; break;
-			case 2: string[0]-=num; break;
-			case 3: type=4;
-					longfloat=floating-num; break;
-			case 4: longfloat-=num; break;
-			case 5: type=6;
-					longint=number-num; break;
-			case 6: longint-=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator-=(float num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be subtracted"; break;
-			case 2: num1=num;
-					string[0]-=num1; break;
-			case 3: floating-=num; break;
-			case 4: longfloat-=num; break;
-			case 5: type=4;
-					longfloat=number-num; break;
-			case 6: type=4;
-					longfloat=longint-num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator-=(double num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be subtracted"; break;
-			case 2: num1=num;
-					string[0]-=num1; break;
-			case 3: type=4;
-					longfloat=floating-num; break;
-			case 4: longfloat-=num; break;
-			case 5: type=4;
-					longfloat=number-num; break;
-			case 6: type=4;
-					longfloat=longint-num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	
-	var operator*(var var2){
-		var var3;
-		try{
-			if(type==var2.type){
-				switch(type){
-					case 1: throw "[Invalid operation] Multiplication cannot be performed on a variable of type 'string'";break;
-					case 2:
-						var3.type=2;
-						var3.string=new char[1];
-						
-						var3.string[0]=string[0]*var2.string[0];
-						allocated=1;
-						break;
-					case 3: var3.type=3;
-							var3.floating=floating*var2.floating; break;
-					case 4: var3.type=4;
-							var3.longfloat=longfloat*var2.longfloat; break;
-					case 5: var3.type=5;
-							var3.number=number*var2.number; break;
-					case 6: var3.type=6;
-							var3.longint=longint*var2.longint; break;	
-				}
-			}
-			else{
-				if((type==3)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=floating*var2.longfloat;
-				}
-				else if((type==3)&&(var2.type==5)){
-					var3.type=3;
-					var3.floating=floating*var2.number;
-				}
-				else if((type==3)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=floating*var2.longint;
-				}
-				
-				else if((type==4)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longfloat*var2.floating;
-				}
-				else if((type==4)&&(var2.type==5)){
-					var3.type=4;
-					var3.longfloat=longfloat*var2.number;
-				}
-				else if((type==4)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=longfloat*var2.longint;
-				}
-				
-				else if((type==5)&&(var2.type==3)){
-					var3.type=3;
-					var3.floating=number*var2.floating;
-				}
-				else if((type==5)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=number*var2.longfloat;
-				}
-				else if((type==5)&&(var2.type==6)){
-					var3.type=6;
-					var3.longint=number*var2.longint;
-				}
-				
-				else if((type==6)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longint*var2.floating;
-				}
-				else if((type==6)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=longint*var2.longfloat;
-				}
-				else if((type==6)&&(var2.type==5)){
-					var3.type=6;
-					var3.longint=longint*var2.number;
-				}
-				
-				else throw "[Incompatibles Types] These types cannot be added";
-			}
-		}catch(const char* exception){
-			cout<<"Cannot add --> "<<exception<<endl;
-		}
-		return var3;
-	}
-	var operator*(int num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "[Incompatible Types] Cannot multiply 'string' and 'int' values!"; break;
-				case 2:
-					var1.type=2;
-					var1.string=new char[1];
-				
-					var1.string[0]=string[0]*num;
-					allocated=1;
-					break;
-				case 3: var1.type=3;
-						var1.floating=floating*num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat*num; break;
-				case 5: var1.type=5;
-						var1.number=number*num; break;
-				case 6: var1.type=6;
-						var1.longint=longint*num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator*(float num){
-		var var1;
-		long num1;
-		try{
-			switch(type){
-				case 1: throw "Cannot multiply String and Float values! [Incompatible Types]"; break;
-				case 2:
-					var1.type=2;
-					var1.string=new char[1];
-					
-					num1=num;
-					var1.string[0]=string[0]*num1;
-					allocated=1;
-					break;
-				case 3: var1.type=3;
-						var1.floating=floating*num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat*num; break;
-				case 5: var1.type=3;
-						var1.floating=number*num; break;
-				case 6: var1.type=4;
-						var1.longfloat=longint*num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator*(double num){
-		var var1;
-		long num1;
-		try{
-			switch(type){
-				case 1: throw "Cannot subtract String and Double values! [Incompatible Types]"; break;
-				case 2: 
-					var1.type=2;
-					var1.string=new char[1];
-				
-					num1=num;
-					var1.string[0]=string[0]*num1;
-					allocated=1;
-					break;
-				case 3: var1.type=4;
-						var1.longfloat=floating*num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat*num; break;
-				case 5: var1.type=4;
-						var1.longfloat=number*num; break;
-				case 6: var1.type=4;
-						var1.longfloat=longint*num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator*(long num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "Cannot multiply String and Long values! [Incompatible Types]"; break;
-				case 2: var1.type=2;
-					var1.string=new char[1];
-				
-					var1.string[0]=string[0]*num;
-					allocated=1;
-					break;
-				case 3: var1.type=4;
-						var1.longfloat=floating*num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat*num; break;
-				case 5: var1.type=6;
-						var1.longint=number*num; break;
-				case 6: var1.type=6;
-						var1.longint=longint*num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	
-	void operator*=(var var2){
-		char* stringcopy;
-		if(type==var2.type){
-			switch(type){
-				case 1: throw "[Invalid operation] Subtraction cannot be performed on a variable of type 'string'"; break;
-				case 2: string[0]=string[0]*var2.string[0]; break;
-				case 3: floating*=var2.floating; break;
-				case 4: longfloat*=var2.longfloat; break;
-				case 5: number*=var2.number; break;
-				case 6: longint*=var2.longint; break;
-			}
-		}
-		else{
+	public: char* operator+(const char* string){
+		/* This function overloads the + operator. This function returns a char* which contains a string which is the concatenation of the string passed in as an argument and the string in THIS object. If the type of THIS object is not a _STR, an exception is thrown. */
 			try{
-				long num1;
-				switch(type){
-					case 1:
-						throw "[Invalid operation] Multiplication cannot be performed on a variable of type 'string'";
-						break;
-				
-					case 2:
-						if(var2.type==3){
-							type=2;
-							num1=var2.floating;
-							string[0]=string[0]*num1;
-							break;
-						}
-						else if(var2.type==4){
-							type=2;
-							num1=var2.longfloat;
-							string[0]=string[0]*num1;
-							break;
-						}
-						else if(var2.type==5){
-							type=2;
-							string[0]=string[0]*var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=2;
-							string[0]=string[0]*var2.longint;
-							break;
-						}
-						break;
-					
-					case 3:
-						if(var2.type==4){
-							type=4;
-							longfloat=floating*var2.longfloat;
-							break;
-						}
-						else if(var2.type==5){
-							type=3;
-							floating=floating*var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=4;
-							longfloat=floating*var2.longint;
-							break;
-						}
-				
-					case 4:
-						if(var2.type==3){
-							type=4;
-							longfloat=longfloat*var2.floating;
-							break;
-						}
-						else if(var2.type==5){
-							type=4;
-							longfloat=longfloat*var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=4;
-							longfloat=longfloat*var2.longint;
-							break;
-						}
-				
-					case 5:
-						if(var2.type==3){
-							type=3;
-							floating=number*var2.floating;
-							break;
-						}
-						else if(var2.type==4){
-							type=4;
-							longfloat=number*var2.longfloat;
-							break;
-						}
-						else if(var2.type==6){
-							type=6;
-							longint=number*var2.longint;
-							break;
-						}
-					
-					case 6:
-						if(var2.type==3){
-							type=4;
-							longfloat=longint*var2.floating;
-							break;
-						}
-						else if(var2.type==4){
-							type=4;
-							longfloat=longint*var2.longfloat;
-							break;
-						}
-						else if(var2.type==5){
-							type=5;
-							longint=longint*var2.number;
-							break;
-						}
-					default:
-						throw "[Incompatible types] You cannot add these two types together!";
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					return append(string);
 				}
+			} catch (int exception){
+				cout<<"error: cannot perform addition on string and number. Also, make sure that both variables are initialised.\n";
 			}
-			catch(const char* exception){
-				cout<<exception<<endl;
-			}
-		}
+			char* ret=NULL;
+			return ret;
 	}
-	void operator*=(int num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be multiplied"; break;
-			case 2: string[0]*=num; break;
-			case 3: floating*=num; break;
-			case 4: longfloat*=num; break;
-			case 5: number*=num; break;
-			case 6: longint*=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator*=(long num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be multiplied"; break;
-			case 2: string[0]*=num; break;
-			case 3: type=4;
-					longfloat=floating*num; break;
-			case 4: longfloat*=num; break;
-			case 5: type=6;
-					longint=number*num; break;
-			case 6: longint*=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator*=(float num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be subtracted"; break;
-			case 2: num1=num;
-					string[0]*=num1; break;
-			case 3: floating*=num; break;
-			case 4: longfloat*=num; break;
-			case 5: type=4;
-					longfloat=number*num; break;
-			case 6: type=4;
-					longfloat=longint*num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator*=(double num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be multiplied"; break;
-			case 2: num1=num;
-					string[0]*=num1; break;
-			case 3: type=4;
-					longfloat=floating*num; break;
-			case 4: longfloat*=num; break;
-			case 5: type=4;
-					longfloat=number*num; break;
-			case 6: type=4;
-					longfloat=longint*num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	
-	var operator/(var var2){
-		var var3;
-		try{
-			if(type==var2.type){
-				switch(type){
-					case 1: throw "[Invalid operation] Division cannot be performed on a variable of type 'string'"; break;
-					case 2: throw "[Invalid operation] Division cannot be performed on a variable of type 'char'"; break;
-					case 3: var3.type=3;
-							var3.floating=floating/var2.floating; break;
-					case 4: var3.type=4;
-							var3.longfloat=longfloat/var2.longfloat; break;
-					case 5: var3.type=5;
-							var3.number=number/var2.number; break;
-					case 6: var3.type=6;
-							var3.longint=longint/var2.longint; break;	
-				}
-			}
-			else{
-				if((type==3)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=floating/var2.longfloat;
-				}
-				else if((type==3)&&(var2.type==5)){
-					var3.type=3;
-					var3.floating=floating/var2.number;
-				}
-				else if((type==3)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=floating/var2.longint;
-				}
-				
-				else if((type==4)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longfloat/var2.floating;
-				}
-				else if((type==4)&&(var2.type==5)){
-					var3.type=4;
-					var3.longfloat=longfloat/var2.number;
-				}
-				else if((type==4)&&(var2.type==6)){
-					var3.type=4;
-					var3.longfloat=longfloat/var2.longint;
-				}
-				
-				else if((type==5)&&(var2.type==3)){
-					var3.type=3;
-					var3.floating=number/var2.floating;
-				}
-				else if((type==5)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=number/var2.longfloat;
-				}
-				else if((type==5)&&(var2.type==6)){
-					var3.type=6;
-					var3.longint=number/var2.longint;
-				}
-				
-				else if((type==6)&&(var2.type==3)){
-					var3.type=4;
-					var3.longfloat=longint/var2.floating;
-				}
-				else if((type==6)&&(var2.type==4)){
-					var3.type=4;
-					var3.longfloat=longint/var2.longfloat;
-				}
-				else if((type==6)&&(var2.type==5)){
-					var3.type=6;
-					var3.longint=longint/var2.number;
-				}
-				
-				else throw "[Incompatibles Types] These types cannot be divided";
-			}
-		}catch(const char* exception){
-			cout<<"Cannot add --> "<<exception<<endl;
-		}
-		return var3;
-	}
-	var operator/(int num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "[Incompatible Types] Cannot divide 'string' and 'int' values!"; break;
-				case 2: throw "[Invalid operation] Division cannot be performed on a variable of type 'char'"; break;
-				case 3: var1.type=3;
-						var1.floating=floating/num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat/num; break;
-				case 5: var1.type=5;
-						var1.number=number/num; break;
-				case 6: var1.type=6;
-						var1.longint=longint/num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator/(float num){
-		var var1;
-		long num1;
-		try{
-			switch(type){
-				case 1: throw "Cannot divide String and Float values! [Incompatible Types]"; break;
-				case 2: throw "Cannot divide Char and Float values! [Incompatible Types]"; break;
-				case 3: var1.type=3;
-						var1.floating=floating/num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat/num; break;
-				case 5: var1.type=3;
-						var1.floating=number/num; break;
-				case 6: var1.type=4;
-						var1.longfloat=longint/num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator/(double num){
-		var var1;
-		long num1;
-		try{
-			switch(type){
-				case 1: throw "Cannot divide String and Double values! [Incompatible Types]"; break;
-				case 2: throw "Cannot divide Char and Double values! [Incompatible Types]"; break;
-				case 3: var1.type=4;
-						var1.longfloat=floating/num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat/num; break;
-				case 5: var1.type=4;
-						var1.longfloat=number/num; break;
-				case 6: var1.type=4;
-						var1.longfloat=longint/num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	var operator/(long num){
-		var var1;
-		try{
-			switch(type){
-				case 1: throw "Cannot divide String and Long values! [Incompatible Types]"; break;
-				case 2: throw "Cannot divide Char and Float values! [Incompatible Types]"; break;
-				case 3: var1.type=4;
-						var1.longfloat=floating/num; break;
-				case 4: var1.type=4;
-						var1.longfloat=longfloat/num; break;
-				case 5: var1.type=6;
-						var1.longint=number/num; break;
-				case 6: var1.type=6;
-						var1.longint=longint/num; break;
-			}
-			return var1;
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return NULL;
-	}
-	
-	void operator/=(var var2){
-		char* stringcopy;
-		if(type==var2.type){
-			switch(type){
-				case 1: throw "[Invalid operation] Division cannot be performed on a variable of type 'string'"; break;
-				case 2: throw "Cannot divide a 'char' value [Incompatible Types]"; break;
-				case 3: floating/=var2.floating; break;
-				case 4: longfloat/=var2.longfloat; break;
-				case 5: number/=var2.number; break;
-				case 6: longint/=var2.longint; break;
-			}
-		}
-		else{
+	public: var operator+(var &v){
+		/* This function overloads the + operator. This function returns a var object. If both the type variables of THIS object and the object passed in match, then the values in the respective objects are added or concatenated and stored in a newly-created object. This is then returned. */
 			try{
-				long num1;
-				switch(type){
-					case 1: throw "[Invalid operation] Division cannot be performed on a variable of type 'string'"; break;
-					case 2: throw "Cannot divide a 'char' value [Incompatible Types]"; break;
-					case 3:
-						if(var2.type==4){
-							type=4;
-							longfloat=floating/var2.longfloat;
-							break;
-						}
-						else if(var2.type==5){
-							type=3;
-							floating=floating/var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=4;
-							longfloat=floating/var2.longint;
-							break;
-						}
-				
-					case 4:
-						if(var2.type==3){
-							type=4;
-							longfloat=longfloat/var2.floating;
-							break;
-						}
-						else if(var2.type==5){
-							type=4;
-							longfloat=longfloat/var2.number;
-							break;
-						}
-						else if(var2.type==6){
-							type=4;
-							longfloat=longfloat/var2.longint;
-							break;
-						}
-				
-					case 5:
-						if(var2.type==3){
-							type=3;
-							floating=number/var2.floating;
-							break;
-						}
-						else if(var2.type==4){
-							type=4;
-							longfloat=number/var2.longfloat;
-							break;
-						}
-						else if(var2.type==6){
-							type=6;
-							longint=number/var2.longint;
-							break;
-						}
-					
-					case 6:
-						if(var2.type==3){
-							type=4;
-							longfloat=longint/var2.floating;
-							break;
-						}
-						else if(var2.type==4){
-							type=4;
-							longfloat=longint/var2.longfloat;
-							break;
-						}
-						else if(var2.type==5){
-							type=5;
-							longint=longint/var2.number;
-							break;
-						}
-					default: throw "[Incompatible types] You cannot divide these two types together!";
+				if(type==v.Type()){
+					if(type==_INT){
+						var a=(val.d + v.val.d);
+						return a;
+					}
+					else if(type==_STR){
+						var a = val.c;
+						a=a.append(v.val.c);
+						return a;
+					}
 				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: performing addition on string and number is not possible. Also, make sure that both variables are initialised.\n";
 			}
-			catch(const char* exception){
-				cout<<exception<<endl;
-			}
-		}
-	}
-	void operator/=(int num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be divided"; break;
-			case 2: throw "Cannot divide a 'char' value [Incompatible Types]"; break;
-			case 3: floating/=num; break;
-			case 4: longfloat/=num; break;
-			case 5: number/=num; break;
-			case 6: longint/=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator/=(long num){
-		try{
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be multiplied"; break;
-			case 2: throw "Cannot divide a 'char' value [Incompatible Types]"; break;
-			case 3: type=4;
-					longfloat=floating/num; break;
-			case 4: longfloat/=num;	break;
-			case 5: type=6;
-					longint=number/num; break;
-			case 6: longint/=num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator/=(float num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be subtracted"; break;
-			case 2: num1=num;
-					string[0]/=num1; break;
-			case 3: floating/=num; break;
-			case 4: longfloat/=num; break;
-			case 5: type=4;
-					longfloat=number/num; break;
-			case 6: type=4;
-					longfloat=longint/num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator/=(double num){
-		try{
-			long num1;
-			switch(type){
-			case 1: throw "[Incompatibles Types] These types cannot be divided"; break;
-			case 2: throw "Cannot divide a 'char' value [Incompatible Types]"; break;
-			case 3: type=4;
-					longfloat=floating/num; break;
-			case 4: longfloat/=num; break;
-			case 5: type=4;
-					longfloat=number/num; break;
-			case 6: type=4;
-					longfloat=longint/num; break;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
+			var a;
+			return a;
 	}
 	
-	int operator>(var var2){
-		if(type==var2.type){
-			int res;
-			switch(type){
-				case 1:
-					res=stringcmp(string, var2.string);
-					
-					if(res==1) return 1;
+	public: double operator-(double num){
+		/*This function overloads the - operator. This function returns a double which is the difference of the argument and the value of the double of THIS object. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT) return (val.d - num);
+			} catch (int exception){
+				cout<<"error: cannot perform subtraction on string and number. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: char* operator-(const char* string){
+		/* This function overloads the - operator. Only an exception is thrown, since subtraction cannot be performed on two strings. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform subtraction on type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform subtraction on two strings\n";
+			}
+			char* ret=NULL;
+			return NULL;
+	}
+	public: var operator-(var &v){
+		/* This function overloads the - operator. Similar to description for 'var operator+(var &v)'. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						var a=(val.d + v.val.d);
+						return a;
+					}
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform subtraction on string and number. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform subtraction on two strings\n";
+			}
+			var a;
+			return a;
+	}
+	
+	public: double operator*(double num){
+		/*This function overloads the * operator. This function returns a double which is the product of the argument and the value of the double of THIS object. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT) return (val.d * num);
+			} catch (int exception){
+				cout<<"error: cannot perform multiplication on string and number. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: char* operator*(const char* string){
+		/* This function overloads the * operator. Only an exception is thrown, since multiplication cannot be performed on two strings. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform multiplication on type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform multiplication on two strings\n";
+			}
+			char* ret=NULL;
+			return NULL;
+	}
+	public: var operator*(var &v){
+		/* This function overloads the * operator. Similar to description for 'var operator+(var &v)'. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						var a=(val.d + v.val.d);
+						return a;
+					}
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform multiplication on string and number. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform multiplication on two strings\n";
+			}
+			var a;
+			return a;
+	}
+	
+	public: double operator/(double num){
+		/*This function overloads the / operator. This function returns a double which is the result of division of the argument and the value of the double of THIS object. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT) return (val.d / num);
+			} catch (int exception){
+				cout<<"error: cannot perform division on string and number. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: char* operator/(const char* string){
+		/* This function overloads the / operator. Only an exception is thrown, since division cannot be performed on two strings. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform division on type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+			char* ret=NULL;
+			return NULL;
+	}
+	public: var operator/(var &v){
+		/* This function overloads the / operator. Similar to description for 'var operator+(var &v)'. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						var a=(val.d / v.val.d);
+						return a;
+					}
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform division on type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+			var a;
+			return a;
+	}
+	
+	public: double operator%(double num){
+		/*This function overloads the % operator. This function returns a double which is the remainder of the division of the argument and the value of the double of THIS object. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					long a=val.d;
+					long b=num;
+					num=a%b;
+					return num;
+				}
+			} catch (int exception){
+				cout<<"error: cannot perform division on string and number. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: char* operator%(const char* string){
+		/* This function overloads the % operator. Only an exception is thrown, since division cannot be performed on two strings. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform division on type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+			char* ret=NULL;
+			return NULL;
+	}
+	public: var operator%(var &v){
+		/* This function overloads the % operator. Similar to description for 'var operator+(var &v)'. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						long a=val.d;
+						long b=v.val.d;
+						double num=a%b;
+						var ab=num;
+						return ab;
+					}
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform division on type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+			var a;
+			return a;
+	}
+	
+	public: int operator==(double num){
+		/*This function overloads the == operator. This function returns 0 if the argument and the double in THIS object are not equal and 1 if they are equal. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					if(num==val.d) return 1;
 					else return 0;
-				case 2: return greaterThan<char>(string[0], var2.string[0]);
-				case 3: return greaterThan<long>(floating, var2.floating);
-				case 4: return greaterThan<long>(longfloat, var2.longfloat);
-				case 5: return greaterThan<long>(number, var2.number);
-				case 6: return greaterThan<long>(longint, var2.longint);
-			}
-		}
-		else{
-			try{
-				switch(type){
-					case 1:
-						throw "[Invalid operation] '>' is an operation that cannot be performed on these types";
-						break;
-					case 2:
-						if(var2.type==3) return greaterThan<char, float>(string[0], var2.floating);
-						else if(var2.type==4) return greaterThan<char, double>(string[0], var2.longfloat);
-						else if(var2.type==5) return greaterThan<char, int>(string[0], var2.number);
-						else if(var2.type==6) return greaterThan<char, long>(string[0], var2.longint);
-						else throw "[Invalid operation] '>' is an operation that cannot be performed on these types";
-					case 3:
-						if(var2.type==2) return greaterThan<float, char>(floating, var2.string[0]);
-						else if(var2.type==4) return greaterThan<float, double>(floating, var2.longfloat);
-						else if(var2.type==5) return greaterThan<float, int>(floating, var2.number);
-						else if(var2.type==6) return greaterThan<float, long>(floating, var2.longint);
-						else throw "[Invalid operation] '>' is an operation that cannot be performed on these types";
-					case 4:
-						if(var2.type==2) return greaterThan<double, char>(longfloat, var2.string[0]);
-						else if(var2.type==3) return greaterThan<double, float>(longfloat, var2.floating);
-						else if(var2.type==5) return greaterThan<double, int>(longfloat, var2.number);
-						else if(var2.type==6) return greaterThan<double, long>(longfloat, var2.longint);
-						else throw "[Invalid operation] '>' is an operation that cannot be performed on these types";
-					case 5:
-						if(var2.type==2) return greaterThan<int, char>(number, var2.string[0]);
-						else if(var2.type==3) return greaterThan<int, float>(number, var2.floating);
-						else if(var2.type==4) return greaterThan<int, double>(number, var2.longfloat);
-						else if(var2.type==6) return greaterThan<int, long>(number, var2.longint);
-						else throw "[Invalid operation] '>' is an operation that cannot be performed on these types";
-					case 6:
-						if(var2.type==2) return greaterThan<long, char>(longint, var2.string[0]);
-						else if(var2.type==3) return greaterThan<long, float>(longint, var2.floating);
-						else if(var2.type==4) return greaterThan<long, double>(longint, var2.longfloat);
-						else if(var2.type==5) return greaterThan<long, int>(longint, var2.number);
-						else throw "[Invalid operation] '>' is an operation that cannot be performed on these types";
 				}
-			}catch(const char* exception){
-				cout<<exception<<endl;
-			}	
-		}
-		return 0;
-	}
-	int operator>(int num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThan<char, int>(string[0], num);
-				case 3: return greaterThan<float, int>(floating, num);
-				case 4: return greaterThan<double, int>(longfloat, num);
-				case 5: return greaterThan<int>(number, num);
-				case 6: return greaterThan<long, int>(longint, num);
+			} catch (int exception){
+				cout<<"error: cannot equate type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
-	int operator>(long num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThan<char, long>(string[0], num);
-				case 3: return greaterThan<float, long>(floating, num);
-				case 4: return greaterThan<double, long>(longfloat, num);
-				case 5: return greaterThan<int, long>(number, num);
-				case 6: return greaterThan<long>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator>(float num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThan<char, float>(string[0], num);
-				case 3: return greaterThan<float>(floating, num);
-				case 4: return greaterThan<double, float>(longfloat, num);
-				case 5: return greaterThan<int, float>(number, num);
-				case 6: return greaterThan<long, float>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator>(double num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThan<char, double>(string[0], num);
-				case 3: return greaterThan<float, double>(floating, num);
-				case 4: return greaterThan<double>(longfloat, num);
-				case 5: return greaterThan<int, double>(number, num);
-				case 6: return greaterThan<long, double>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator>(char num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'char'"; break;
-				case 2: return greaterThan<char>(string[0], num);
-				case 3: return greaterThan<float, char>(floating, num);
-				case 4: return greaterThan<double, char>(longfloat, num);
-				case 5: return greaterThan<int, char>(number, num);
-				case 6: return greaterThan<long, char>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	
-	int operator>=(var var2){
-		if(type==var2.type){
-			int res;
-			switch(type){
-				case 1:
-					res=stringcmp(string, var2.string);
-					
-					if(res==1||res==0) return 1;
+	public: int operator==(const char* string){
+		/* This function overloads the == operator. 1 or 0 is returned if the variables are equal or not equal respectively. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					if(strEquals(val.c, string)==1) return 1;
 					else return 0;
-				case 2: return greaterThanEqual<char>(string[0], var2.string[0]);
-				case 3: return greaterThanEqual<long>(floating, var2.floating);
-				case 4: return greaterThanEqual<long>(longfloat, var2.longfloat);
-				case 5: return greaterThanEqual<long>(number, var2.number);
-				case 6: return greaterThanEqual<long>(longint, var2.longint);
-			}
-		}
-		else{
-			try{
-				switch(type){
-					case 1:
-						throw "[Invalid operation] '>=' is an operation that cannot be performed on these types";
-						break;
-					case 2:
-						if(var2.type==3) return greaterThanEqual<char, float>(string[0], var2.floating);
-						else if(var2.type==4) return greaterThanEqual<char, double>(string[0], var2.longfloat);
-						else if(var2.type==5) return greaterThanEqual<char, int>(string[0], var2.number);
-						else if(var2.type==6) return greaterThanEqual<char, long>(string[0], var2.longint);
-						else throw "[Invalid operation] '>=' is an operation that cannot be performed on these types";
-					case 3:
-						if(var2.type==2) return greaterThanEqual<float, char>(floating, var2.string[0]);
-						else if(var2.type==4) return greaterThanEqual<float, double>(floating, var2.longfloat);
-						else if(var2.type==5) return greaterThanEqual<float, int>(floating, var2.number);
-						else if(var2.type==6) return greaterThanEqual<float, long>(floating, var2.longint);
-						else throw "[Invalid operation] '>=' is an operation that cannot be performed on these types";
-					case 4:
-						if(var2.type==2) return greaterThanEqual<double, char>(longfloat, var2.string[0]);
-						else if(var2.type==3) return greaterThanEqual<double, float>(longfloat, var2.floating);
-						else if(var2.type==5) return greaterThanEqual<double, int>(longfloat, var2.number);
-						else if(var2.type==6) return greaterThanEqual<double, long>(longfloat, var2.longint);
-						else throw "[Invalid operation] '>=' is an operation that cannot be performed on these types";
-					case 5:
-						if(var2.type==2) return greaterThanEqual<int, char>(number, var2.string[0]);
-						else if(var2.type==3) return greaterThanEqual<int, float>(number, var2.floating);
-						else if(var2.type==4) return greaterThanEqual<int, double>(number, var2.longfloat);
-						else if(var2.type==6) return greaterThanEqual<int, long>(number, var2.longint);
-						else throw "[Invalid operation] '>=' is an operation that cannot be performed on these types";
-					case 6:
-						if(var2.type==2) return greaterThanEqual<long, char>(longint, var2.string[0]);
-						else if(var2.type==3) return greaterThanEqual<long, float>(longint, var2.floating);
-						else if(var2.type==4) return greaterThanEqual<long, double>(longint, var2.longfloat);
-						else if(var2.type==5) return greaterThanEqual<long, int>(longint, var2.number);
-						else throw "[Invalid operation] '>=' is an operation that cannot be performed on these types";
 				}
-			}catch(const char* exception){
-				cout<<exception<<endl;
-			}	
-		}
-		return 0;
-	}
-	int operator>=(int num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThanEqual<char, int>(string[0], num);
-				case 3: return greaterThanEqual<float, int>(floating, num);
-				case 4: return greaterThanEqual<double, int>(longfloat, num);
-				case 5: return greaterThanEqual<int>(number, num);
-				case 6: return greaterThanEqual<long, int>(longint, num);
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot equate type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
-	int operator>=(long num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThanEqual<char, long>(string[0], num);
-				case 3: return greaterThanEqual<float, long>(floating, num);
-				case 4: return greaterThanEqual<double, long>(longfloat, num);
-				case 5: return greaterThanEqual<int, long>(number, num);
-				case 6: return greaterThanEqual<long>(longint, num);
+	public: int operator==(var &v){
+		/* This function overloads the == operator. If the type of variable of THIS object and the type variable of the object passed in are not the same, then an exception is thrown. If not, then the values are checked and 1 or 0 is returned depending upon whether they are equal or not. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						if(v.val.d==val.d) return 1;
+						else return 0;
+					}
+					else if(type==_STR){
+						if(strEquals(val.c, v.val.c)==1) return 1;
+						else return 0;
+					}
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot equate type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator>=(float num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThanEqual<char, float>(string[0], num);
-				case 3: return greaterThanEqual<float>(floating, num);
-				case 4: return greaterThanEqual<double, float>(longfloat, num);
-				case 5: return greaterThanEqual<int, float>(number, num);
-				case 6: return greaterThanEqual<long, float>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator>=(double num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return greaterThanEqual<char, double>(string[0], num);
-				case 3: return greaterThanEqual<float, double>(floating, num);
-				case 4: return greaterThanEqual<double>(longfloat, num);
-				case 5: return greaterThanEqual<int, double>(number, num);
-				case 6: return greaterThanEqual<long, double>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator>=(char num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'char'"; break;
-				case 2: return greaterThanEqual<char>(string[0], num);
-				case 3: return greaterThanEqual<float, char>(floating, num);
-				case 4: return greaterThanEqual<double, char>(longfloat, num);
-				case 5: return greaterThanEqual<int, char>(number, num);
-				case 6: return greaterThanEqual<long, char>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
 	
-	int operator<(var var2){
-		if(type==var2.type){
-			int res;
-			switch(type){
-				case 1:
-					res=stringcmp(string, var2.string);
-					
-					if(res==(-1)) return 1;
+	public: int operator!=(double num){
+		/*This function overloads the != operator. This function returns 1 if the argument and the double in THIS object are not equal and 0 if they are equal. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					if(num==val.d) return 0;
+					else return 1;
+				}
+			} catch (int exception){
+				cout<<"error: cannot equate type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: int operator!=(const char* string){
+		/* This function overloads the != operator. 0 or 1 is returned if the variables are equal or not equal respectively. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					if(strEquals(val.c, string)==1) return 0;
+					else return 1;
+				}
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot equate type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: int operator!=(var &v){
+		/* This function overloads the != operator. If the type of variable of THIS object and the type variable of the object passed in are not the same, then an exception is thrown. If not, then the values are checked and 1 or 0 is returned depending upon whether they are equal or not. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						if(v.val.d==val.d) return 0;
+						else return 1;
+					}
+					else if(type==_STR){
+						if(strEquals(val.c, v.val.c)==1) return 0;
+						else return 1;
+					}
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot equate type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	
+	public: int operator>(double num){
+		/*This function overloads the > operator. This function returns 1 if THIS double is greater than the argument passed in and 0 if not. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					if(val.d>num) return 1;
 					else return 0;
-				case 2: return !greaterThanEqual<char>(string[0], var2.string[0]);
-				case 3: return !greaterThanEqual<long>(floating, var2.floating);
-				case 4: return !greaterThanEqual<long>(longfloat, var2.longfloat);
-				case 5: return !greaterThanEqual<long>(number, var2.number);
-				case 6: return !greaterThanEqual<long>(longint, var2.longint);
-			}
-		}
-		else{
-			try{
-				switch(type){
-					case 1:
-						throw "[Invalid operation] '<' is an operation that cannot be performed on these types";
-						break;
-					case 2:
-						if(var2.type==3) return !greaterThanEqual<char, float>(string[0], var2.floating);
-						else if(var2.type==4) return !greaterThanEqual<char, double>(string[0], var2.longfloat);
-						else if(var2.type==5) return !greaterThanEqual<char, int>(string[0], var2.number);
-						else if(var2.type==6) return !greaterThanEqual<char, long>(string[0], var2.longint);
-						else throw "[Invalid operation] '<' is an operation that cannot be performed on these types";
-					case 3:
-						if(var2.type==2) return !greaterThanEqual<float, char>(floating, var2.string[0]);
-						else if(var2.type==4) return !greaterThanEqual<float, double>(floating, var2.longfloat);
-						else if(var2.type==5) return !greaterThanEqual<float, int>(floating, var2.number);
-						else if(var2.type==6) return !greaterThanEqual<float, long>(floating, var2.longint);
-						else throw "[Invalid operation] '<' is an operation that cannot be performed on these types";
-					case 4:
-						if(var2.type==2) return !greaterThanEqual<double, char>(longfloat, var2.string[0]);
-						else if(var2.type==3) return !greaterThanEqual<double, float>(longfloat, var2.floating);
-						else if(var2.type==5) return !greaterThanEqual<double, int>(longfloat, var2.number);
-						else if(var2.type==6) return !greaterThanEqual<double, long>(longfloat, var2.longint);
-						else throw "[Invalid operation] '<' is an operation that cannot be performed on these types";
-					case 5:
-						if(var2.type==2) return !greaterThanEqual<int, char>(number, var2.string[0]);
-						else if(var2.type==3) return !greaterThanEqual<int, float>(number, var2.floating);
-						else if(var2.type==4) return !greaterThanEqual<int, double>(number, var2.longfloat);
-						else if(var2.type==6) return !greaterThanEqual<int, long>(number, var2.longint);
-						else throw "[Invalid operation] '<' is an operation that cannot be performed on these types";
-					case 6:
-						if(var2.type==2) return !greaterThanEqual<long, char>(longint, var2.string[0]);
-						else if(var2.type==3) return !greaterThanEqual<long, float>(longint, var2.floating);
-						else if(var2.type==4) return !greaterThanEqual<long, double>(longint, var2.longfloat);
-						else if(var2.type==5) return !greaterThanEqual<long, int>(longint, var2.number);
-						else throw "[Invalid operation] '<' is an operation that cannot be performed on these types";
 				}
-			}catch(const char* exception){
-				cout<<exception<<endl;
-			}	
-		}
-		return 0;
-	}
-	int operator<(int num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThanEqual<char, int>(string[0], num);
-				case 3: return !greaterThanEqual<float, int>(floating, num);
-				case 4: return !greaterThanEqual<double, int>(longfloat, num);
-				case 5: return !greaterThanEqual<int>(number, num);
-				case 6: return !greaterThanEqual<long, int>(longint, num);
+			} catch (int exception){
+				cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
-	int operator<(long num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThanEqual<char, long>(string[0], num);
-				case 3: return !greaterThanEqual<float, long>(floating, num);
-				case 4: return !greaterThanEqual<double, long>(longfloat, num);
-				case 5: return !greaterThanEqual<int, long>(number, num);
-				case 6: return !greaterThanEqual<long>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator<(float num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThanEqual<char, float>(string[0], num);
-				case 3: return !greaterThanEqual<float>(floating, num);
-				case 4: return !greaterThanEqual<double, float>(longfloat, num);
-				case 5: return !greaterThanEqual<int, float>(number, num);
-				case 6: return !greaterThanEqual<long, float>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator<(double num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThanEqual<char, double>(string[0], num);
-				case 3: return !greaterThanEqual<float, double>(floating, num);
-				case 4: return !greaterThanEqual<double>(longfloat, num);
-				case 5: return !greaterThanEqual<int, double>(number, num);
-				case 6: return !greaterThanEqual<long, double>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator<(char num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'char'"; break;
-				case 2: return !greaterThanEqual<char>(string[0], num);
-				case 3: return !greaterThanEqual<float, char>(floating, num);
-				case 4: return !greaterThanEqual<double, char>(longfloat, num);
-				case 5: return !greaterThanEqual<int, char>(number, num);
-				case 6: return !greaterThanEqual<long, char>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	
-	int operator<=(var var2){
-		if(type==var2.type){
-			int res;
-			switch(type){
-				case 1:
-					res=stringcmp(string, var2.string);
-					
-					if(res==(-1)||res==0) return 1;
+	public: int operator>(const char* string){
+		/* This function overloads the > operator. 0 or 1 is returned if the argument string is greater than THIS string. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					if(strCompare(val.c, string)==1) return 1;
 					else return 0;
-				case 2: return !greaterThan<char>(string[0], var2.string[0]);
-				case 3: return !greaterThan<long>(floating, var2.floating);
-				case 4: return !greaterThan<long>(longfloat, var2.longfloat);
-				case 5: return !greaterThan<long>(number, var2.number);
-				case 6: return !greaterThan<long>(longint, var2.longint);
-			}
-		}
-		else{
-			try{
-				switch(type){
-					case 1:
-						throw "[Invalid operation] '<=' is an operation that cannot be performed on these types";
-						break;
-					case 2:
-						if(var2.type==3) return !greaterThan<char, float>(string[0], var2.floating);
-						else if(var2.type==4) return !greaterThan<char, double>(string[0], var2.longfloat);
-						else if(var2.type==5) return !greaterThan<char, int>(string[0], var2.number);
-						else if(var2.type==6) return !greaterThan<char, long>(string[0], var2.longint);
-						else throw "[Invalid operation] '<=' is an operation that cannot be performed on these types";
-					case 3:
-						if(var2.type==2) return !greaterThan<float, char>(floating, var2.string[0]);
-						else if(var2.type==4) return !greaterThan<float, double>(floating, var2.longfloat);
-						else if(var2.type==5) return !greaterThan<float, int>(floating, var2.number);
-						else if(var2.type==6) return !greaterThan<float, long>(floating, var2.longint);
-						else throw "[Invalid operation] '<=' is an operation that cannot be performed on these types";
-					case 4:
-						if(var2.type==2) return !greaterThan<double, char>(longfloat, var2.string[0]);
-						else if(var2.type==3) return !greaterThan<double, float>(longfloat, var2.floating);
-						else if(var2.type==5) return !greaterThan<double, int>(longfloat, var2.number);
-						else if(var2.type==6) return !greaterThan<double, long>(longfloat, var2.longint);
-						else throw "[Invalid operation] '<=' is an operation that cannot be performed on these types";
-					case 5:
-						if(var2.type==2) return !greaterThan<int, char>(number, var2.string[0]);
-						else if(var2.type==3) return !greaterThan<int, float>(number, var2.floating);
-						else if(var2.type==4) return !greaterThan<int, double>(number, var2.longfloat);
-						else if(var2.type==6) return !greaterThan<int, long>(number, var2.longint);
-						else throw "[Invalid operation] '<=' is an operation that cannot be performed on these types";
-					case 6:
-						if(var2.type==2) return !greaterThan<long, char>(longint, var2.string[0]);
-						else if(var2.type==3) return !greaterThan<long, float>(longint, var2.floating);
-						else if(var2.type==4) return !greaterThan<long, double>(longint, var2.longfloat);
-						else if(var2.type==5) return !greaterThan<long, int>(longint, var2.number);
-						else throw "[Invalid operation] '<=' is an operation that cannot be performed on these types";
 				}
-			}catch(const char* exception){
-				cout<<exception<<endl;
-			}	
-		}
-		return 0;
-	}
-	int operator<=(int num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThan<char, int>(string[0], num);
-				case 3: return !greaterThan<float, int>(floating, num);
-				case 4: return !greaterThan<double, int>(longfloat, num);
-				case 5: return !greaterThan<int>(number, num);
-				case 6: return !greaterThan<long, int>(longint, num);
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
-	int operator<=(long num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThan<char, long>(string[0], num);
-				case 3: return !greaterThan<float, long>(floating, num);
-				case 4: return !greaterThan<double, long>(longfloat, num);
-				case 5: return !greaterThan<int, long>(number, num);
-				case 6: return !greaterThan<long>(longint, num);
+	public: int operator>(var &v){
+		/* This function overloads the > operator. If the type of variable of THIS object and the type variable of the object passed in are not the same, then an exception is thrown. If not, then the values are checked and 1 or 0 is returned depending upon whether the argument 'var' is greater than THIS var. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						if(val.d>v.val.d) return 1;
+						else return 0;
+					}
+					else if(type==_STR){
+						if(strCompare(val.c, v.val.c)==1) return 1;
+						else return 0;
+					}
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator<=(float num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThan<char, float>(string[0], num);
-				case 3: return !greaterThan<float>(floating, num);
-				case 4: return !greaterThan<double, float>(longfloat, num);
-				case 5: return !greaterThan<int, float>(number, num);
-				case 6: return !greaterThan<long, float>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator<=(double num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !greaterThan<char, double>(string[0], num);
-				case 3: return !greaterThan<float, double>(floating, num);
-				case 4: return !greaterThan<double>(longfloat, num);
-				case 5: return !greaterThan<int, double>(number, num);
-				case 6: return !greaterThan<long, double>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator<=(char num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'char'"; break;
-				case 2: return !greaterThan<char>(string[0], num);
-				case 3: return !greaterThan<float, char>(floating, num);
-				case 4: return !greaterThan<double, char>(longfloat, num);
-				case 5: return !greaterThan<int, char>(number, num);
-				case 6: return !greaterThan<long, char>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
 	
-	int operator==(var var2){
-		if(type==var2.type){
-			int res;
-			switch(type){
-				case 1:
-					res=stringcmp(string, var2.string);
-					
-					if(res==0) return 1;
+	public: int operator>=(double num){
+		/*This function overloads the >= operator. This function returns 1 if THIS double is greater than or equal to the argument passed in and 0 if not. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					if(num>=val.d) return 1;
 					else return 0;
-				case 2: return Equal<char>(string[0], var2.string[0]);
-				case 3: return Equal<long>(floating, var2.floating);
-				case 4: return Equal<long>(longfloat, var2.longfloat);
-				case 5: return Equal<long>(number, var2.number);
-				case 6: return Equal<long>(longint, var2.longint);
-			}
-		}
-		else{
-			try{
-				switch(type){
-					case 1:
-						throw "[Invalid operation] '==' is an operation that cannot be performed on these types";
-						break;
-					case 2:
-						if(var2.type==3) return Equal<char, float>(string[0], var2.floating);
-						else if(var2.type==4) return Equal<char, double>(string[0], var2.longfloat);
-						else if(var2.type==5) return Equal<char, int>(string[0], var2.number);
-						else if(var2.type==6) return Equal<char, long>(string[0], var2.longint);
-						else throw "[Invalid operation] '==' is an operation that cannot be performed on these types";
-					case 3:
-						if(var2.type==2) return Equal<float, char>(floating, var2.string[0]);
-						else if(var2.type==4) return Equal<float, double>(floating, var2.longfloat);
-						else if(var2.type==5) return Equal<float, int>(floating, var2.number);
-						else if(var2.type==6) return Equal<float, long>(floating, var2.longint);
-						else throw "[Invalid operation] '==' is an operation that cannot be performed on these types";
-					case 4:
-						if(var2.type==2) return Equal<double, char>(longfloat, var2.string[0]);
-						else if(var2.type==3) return Equal<double, float>(longfloat, var2.floating);
-						else if(var2.type==5) return Equal<double, int>(longfloat, var2.number);
-						else if(var2.type==6) return Equal<double, long>(longfloat, var2.longint);
-						else throw "[Invalid operation] '==' is an operation that cannot be performed on these types";
-					case 5:
-						if(var2.type==2) return Equal<int, char>(number, var2.string[0]);
-						else if(var2.type==3) return Equal<int, float>(number, var2.floating);
-						else if(var2.type==4) return Equal<int, double>(number, var2.longfloat);
-						else if(var2.type==6) return Equal<int, long>(number, var2.longint);
-						else throw "[Invalid operation] '==' is an operation that cannot be performed on these types";
-					case 6:
-						if(var2.type==2) return Equal<long, char>(longint, var2.string[0]);
-						else if(var2.type==3) return Equal<long, float>(longint, var2.floating);
-						else if(var2.type==4) return Equal<long, double>(longint, var2.longfloat);
-						else if(var2.type==5) return Equal<long, int>(longint, var2.number);
-						else throw "[Invalid operation] '==' is an operation that cannot be performed on these types";
 				}
-			}catch(const char* exception){
-				cout<<exception<<endl;
-			}	
-		}
-		return 0;
-	}
-	int operator==(int num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return Equal<char, int>(string[0], num);
-				case 3: return Equal<float, int>(floating, num);
-				case 4: return Equal<double, int>(longfloat, num);
-				case 5: return Equal<int>(number, num);
-				case 6: return Equal<long, int>(longint, num);
+			} catch (int exception){
+				cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
-	int operator==(long num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return Equal<char, long>(string[0], num);
-				case 3: return Equal<float, long>(floating, num);
-				case 4: return Equal<double, long>(longfloat, num);
-				case 5: return Equal<int, long>(number, num);
-				case 6: return Equal<long>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator==(float num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return Equal<char, float>(string[0], num);
-				case 3: return Equal<float>(floating, num);
-				case 4: return Equal<double, float>(longfloat, num);
-				case 5: return Equal<int, float>(number, num);
-				case 6: return Equal<long, float>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator==(double num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return Equal<char, double>(string[0], num);
-				case 3: return Equal<float, double>(floating, num);
-				case 4: return Equal<double>(longfloat, num);
-				case 5: return Equal<int, double>(number, num);
-				case 6: return Equal<long, double>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator==(char num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'char'"; break;
-				case 2: return Equal<char>(string[0], num);
-				case 3: return Equal<float, char>(floating, num);
-				case 4: return Equal<double, char>(longfloat, num);
-				case 5: return Equal<int, char>(number, num);
-				case 6: return Equal<long, char>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	
-	int operator!=(var var2){
-		if(type==var2.type){
-			int res;
-			switch(type){
-				case 1:
-					res=stringcmp(string, var2.string);
-					
-					if(res!=0) return 1;
+	public: int operator>=(const char* string){
+		/* This function overloads the >= operator. 1 or 0 is returned if the argument string is greater than or equal to THIS string or not. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					if(strCompare(val.c, string)==1 || strCompare(val.c, string)==0) return 1;
 					else return 0;
-				case 2: return !Equal<char>(string[0], var2.string[0]);
-				case 3: return !Equal<long>(floating, var2.floating);
-				case 4: return !Equal<long>(longfloat, var2.longfloat);
-				case 5: return !Equal<long>(number, var2.number);
-				case 6: return !Equal<long>(longint, var2.longint);
+				}
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}
-		else{
+			return -1;
+	}
+	public: int operator>=(var &v){
+		/* This function overloads the >= operator. If the type of variable of THIS object and the type variable of the object passed in are not the same, then an exception is thrown. If not, then the values are checked and 1 or 0 is returned depending upon whether the argument 'var' is greater than or equal to than THIS var or not respectively. */
 			try{
-				switch(type){
-					case 1:
-						throw "[Invalid operation] '!=' is an operation that cannot be performed on these types";
-						break;
-					case 2:
-						if(var2.type==3) return !Equal<char, float>(string[0], var2.floating);
-						else if(var2.type==4) return !Equal<char, double>(string[0], var2.longfloat);
-						else if(var2.type==5) return !Equal<char, int>(string[0], var2.number);
-						else if(var2.type==6) return !Equal<char, long>(string[0], var2.longint);
-						else throw "[Invalid operation] '!=' is an operation that cannot be performed on these types";
-					case 3:
-						if(var2.type==2) return !Equal<float, char>(floating, var2.string[0]);
-						else if(var2.type==4) return !Equal<float, double>(floating, var2.longfloat);
-						else if(var2.type==5) return !Equal<float, int>(floating, var2.number);
-						else if(var2.type==6) return !Equal<float, long>(floating, var2.longint);
-						else throw "[Invalid operation] '!=' is an operation that cannot be performed on these types";
-					case 4:
-						if(var2.type==2) return !Equal<double, char>(longfloat, var2.string[0]);
-						else if(var2.type==3) return !Equal<double, float>(longfloat, var2.floating);
-						else if(var2.type==5) return !Equal<double, int>(longfloat, var2.number);
-						else if(var2.type==6) return !Equal<double, long>(longfloat, var2.longint);
-						else throw "[Invalid operation] '!=' is an operation that cannot be performed on these types";
-					case 5:
-						if(var2.type==2) return !Equal<int, char>(number, var2.string[0]);
-						else if(var2.type==3) return !Equal<int, float>(number, var2.floating);
-						else if(var2.type==4) return !Equal<int, double>(number, var2.longfloat);
-						else if(var2.type==6) return !Equal<int, long>(number, var2.longint);
-						else throw "[Invalid operation] '!=' is an operation that cannot be performed on these types";
-					case 6:
-						if(var2.type==2) return !Equal<long, char>(longint, var2.string[0]);
-						else if(var2.type==3) return !Equal<long, float>(longint, var2.floating);
-						else if(var2.type==4) return !Equal<long, double>(longint, var2.longfloat);
-						else if(var2.type==5) return !Equal<long, int>(longint, var2.number);
-						else throw "[Invalid operation] '!=' is an operation that cannot be performed on these types";
+				if(type==v.Type()){
+					if(type==_INT){
+						if(val.d>=v.val.d) return 1;
+						else return 0;
+					}
+					else if(type==_STR){
+						if(strCompare(val.c, v.val.c)==1 || strCompare(val.c, v.val.c)==0) return 1;
+						else return 0;
+					}
 				}
-			}catch(const char* exception){
-				cout<<exception<<endl;
-			}	
-		}
-		return 0;
-	}
-	int operator!=(int num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !Equal<char, int>(string[0], num);
-				case 3: return !Equal<float, int>(floating, num);
-				case 4: return !Equal<double, int>(longfloat, num);
-				case 5: return !Equal<int>(number, num);
-				case 6: return !Equal<long, int>(longint, num);
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator!=(long num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !Equal<char, long>(string[0], num);
-				case 3: return !Equal<float, long>(floating, num);
-				case 4: return !Equal<double, long>(longfloat, num);
-				case 5: return !Equal<int, long>(number, num);
-				case 6: return !Equal<long>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator!=(float num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !Equal<char, float>(string[0], num);
-				case 3: return !Equal<float>(floating, num);
-				case 4: return !Equal<double, float>(longfloat, num);
-				case 5: return !Equal<int, float>(number, num);
-				case 6: return !Equal<long, float>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator!=(double num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'int'"; break;
-				case 2: return !Equal<char, double>(string[0], num);
-				case 3: return !Equal<float, double>(floating, num);
-				case 4: return !Equal<double>(longfloat, num);
-				case 5: return !Equal<int, double>(number, num);
-				case 6: return !Equal<long, double>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
-	}
-	int operator!=(char num){
-		try{
-			switch(type){
-				case 1: throw "[Invalid comparison] 'string cannot be compared to 'char'"; break;
-				case 2: return !Equal<char>(string[0], num);
-				case 3: return !Equal<float, char>(floating, num);
-				case 4: return !Equal<double, char>(longfloat, num);
-				case 5: return !Equal<int, char>(number, num);
-				case 6: return !Equal<long, char>(longint, num);
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return 0;
+			return -1;
 	}
 	
-	void operator++(int a){
-		try{
-			switch(type){
-				case 1: throw "[Invalid operation] '++' cannot be performed on var of type 'string'"; break;
-				case 2: string[0]+=1; break;
-				case 3: floating++;
-				case 4: longfloat++;
-				case 5: number++;
-				case 6: longint++;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	void operator--(int a){
-		try{
-			switch(type){
-				case 1: throw "[Invalid operation] '--' cannot be performed on var of type 'string'"; break;
-				case 2: string[0]-=1; break;
-				case 3: floating--;
-				case 4: longfloat--;
-				case 5: number--;
-				case 6: longint--;
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-	}
-	
-	var operator%(var var1){
-		var var3;
-		try{
-			long num1;
-			if(type==var1.type){
-				switch(type){
-					case 5: var3.type=5;
-							var3.number=number%var1.number; break;
-					case 6: var3.type=6;
-							var3.longint=longint%var1.longint; break;
-					default: throw "[invalid operation] '%' cannot be used on this type";
+	public: int operator<(double num){
+		/*This function overloads the < operator. This function returns 1 if THIS double is lesser than the argument passed in and 0 if not. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					if(val.d<num) return 1;
+					else return 0;
 				}
+			} catch (int exception){
+				cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-			else{
-				long num1;
-				switch(type){
-					case 1: throw "[Invalid operation] '%' cannot be used on this type"; break;
-					case 2:
-							if(var1.type==5){
-								var3.type=2;
-								var3.string=new char[1];
-								var3.string[0]=string[0]%var1.number;
-								break;
-							}
-							else if(var1.type==6){ 
-								var3.type=2;
-								var3.string=new char[1];
-								var3.string[0]=string[0]%var1.longint;
-								break;
-							}
-							else throw "[Invalid operation] '%' cannot be used on these types";
-					case 5:
-							if(var1.type==2){ 
-								var3.type=5;
-								var3.number=number%var1.string[0];
-								break;
-							}
-							else if(var1.type==6){ 
-								var3.type=6;
-								var3.longint=number;
-								var3.longint%=var1.longint;
-								break;
-							}
-							else throw "[Invalid operation] '%' cannot be used on these types";
-					case 6:
-							if(var1.type==2){
-								var3.type=6;
-								var3.longint=longint%var1.string[0];
-								break;
-							}
-							else if(var1.type==5){
-								var3.type=6;
-								var3.longint=longint%var1.number; 
-								break;
-							}
-							else throw "[Invalid operation] '%' cannot be used on these types";
-					default: throw "[Invalid operation] '%' cannot be used on these types"; break;
+			return -1;
+	}
+	public: int operator<(const char* string){
+		/* This function overloads the < operator. 1 is returned if the argument string is lesser than THIS string. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					if(strCompare(val.c, string)==1) return 0;
+					else return 1;
 				}
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return var3;
+			return -1;
 	}
-	var operator%(int num){
-		var var3;
-		try{
-			switch(type){
-				case 5: var3.type=5;
-						var3.number=number%num;
-						break;
-				case 6: var3.type=6;
-						var3.longint=longint%num;
-						break;
-				default: throw "[Invalid operation] '%' cannot be performed on this type";
+	public: int operator<(var &v){
+		/* This function overloads the < operator. If the type of variable of THIS object and the type variable of the object passed in are not the same, then an exception is thrown. If not, then the values are checked and 1 or 0 is returned depending upon whether the argument 'var' is lesser than THIS var or not respectively. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						if(val.d<v.val.d) return 1;
+						else return 0;
+					}
+					else if(type==_STR){
+						if(strCompare(val.c, v.val.c)==1) return 0;
+						else return 1;
+					}
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
 			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return var3;
-	}
-	var operator%(long num){
-		var var3;
-		try{
-			switch(type){
-				case 5: var3.type=6;
-						var3.longint=number;
-						var3.longint%=num;
-						break;
-				case 6: var3.type=6;
-						var3.longint=longint%num; break;
-				default: throw "[Invalid operation] '%' cannot be performed on this type";
-			}
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return var3;
+			return -1;
 	}
 	
-	char operator[](int num){
-		try{
-			if(allocated==1) return string[num];
-			else throw "[String not found] String has not been allocated";
-		}catch(const char* exception){
-			cout<<exception<<endl;
-		}
-		return '?';
+	public: int operator<=(double num){
+		/*This function overloads the <= operator. This function returns 1 if THIS double is lesser than or equal to the argument passed in and 1 if not. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					if(num<=val.d) return 1;
+					else return 0;
+				}
+			} catch (int exception){
+				cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: int operator<=(const char* string){
+		/* This function overloads the <= operator. 1 or 0 is returned if the argument string is lesser than or equal to THIS string or not. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					if(strCompare(val.c, string)==1 || strCompare(val.c, string)==0) return 0;
+					else return 1;
+				}
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
+	}
+	public: int operator<=(var &v){
+		/* This function overloads the <= operator. If the type of variable of THIS object and the type variable of the object passed in are not the same, then an exception is thrown. If not, then the values are checked and 1 or 0 is returned depending upon whether the argument 'var' is lesser than or equal to than THIS var or not respectively. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						if(val.d<=v.val.d) return 1;
+						else return 0;
+					}
+					else if(type==_STR){
+						if(strCompare(val.c, v.val.c)==1 || strCompare(val.c, v.val.c)==0) return 0;
+						else return 1;
+					}
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot compare type 'string' and type 'number'. Also, make sure that both variables are initialised.\n";
+			}
+			return -1;
 	}
 	
-	friend ostream &operator<<(ostream &o, var var1);
-	friend istream &operator>>(istream &i, var &var1);
+	public: void operator+=(double num){
+		/*This function overloads the += operator. This function increments the double value of THIS object by 'num'. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT) val.d+=num;
+			} catch (int exception){
+				cout<<"error: cannot perform addition on string and number. Also, make sure that both variables are initialised.\n";
+			}
+	}
+	public: void operator+=(const char* string){
+		/* This function overloads the += operator. This function appends the argument to the string of THIS object. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR){
+					appendString(string);
+				}
+			} catch (int exception){
+				cout<<"error: cannot perform addition on string and number. Also, make sure that both variables are initialised.\n";
+			}
+	}
+	public: void operator+=(var &v){
+		/* This function overloads the += operator. This function checks if both the type variables of THIS object and the object passed in match, then the values in the respective objects are added or concatenated and stored in THIS object. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT) val.d+=v.val.d;
+					else if(type==_STR) appendString(v.val.c);
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: performing addition on string and number is not possible. Also, make sure that both variables are initialised.\n";
+			}
+	}
+	
+	public: void operator-=(double num){
+		/*This function overloads the -= operator. This function decrements the double value of THIS object by 'num'. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT) val.d-=num;
+			} catch (int exception){
+				cout<<"error: cannot perform subtraction on string and number. Also, make sure that both variables are initialised.\n";
+			}
+	}
+	public: void operator-=(const char* string){
+		/* This function overloads the -= operator. This function throws only an exception as strings cannot be subtracted. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform subtraction on string and number. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform subtraction on two strings\n";
+			}
+	}
+	public: void operator-=(var &v){
+		/* This function overloads the -= operator. This function checks if both the type variables of THIS object and the object passed are of type _INT, then the value in THIS object is decremented by 'v.val.d'. If they are of type _STR, then an exception is thrown. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT) val.d-=v.val.d;
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: performing subtraction on string and number is not possible. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform subtraction on two strings\n";
+			}
+	}
+	
+	public: void operator*=(double num){
+		/*This function overloads the *= operator. This function multiplies the double value of THIS object by 'num'. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT) val.d*=num;
+			} catch (int exception){
+				cout<<"error: cannot perform multiplication on string and number. Also, make sure that both variables are initialised.\n";
+			}
+	}
+	public: void operator*=(const char* string){
+		/* This function overloads the *= operator. This function throws only an exception as strings cannot be multiplied. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform multiplication on string and number. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform multiplication on two strings\n";
+			}
+	}
+	public: void operator*=(var &v){
+		/* This function overloads the *= operator. This function checks if both the type variables of THIS object and the object passed are of type _INT, then the value in THIS object is multiplied by 'v.val.d'. If they are of type _STR, then an exception is thrown. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT) val.d*=v.val.d;
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: performing multiplication on string and number is not possible. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform multiplication on two strings\n";
+			}
+	}
+	
+	public: void operator/=(double num){
+		/*This function overloads the /= operator. This function divides the double value of THIS object by 'num'. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT) val.d/=num;
+			} catch (int exception){
+				cout<<"error: cannot perform division on string and number. Also, make sure that both variables are initialised.\n";
+			}
+	}
+	public: void operator/=(const char* string){
+		/* This function overloads the /= operator. This function throws only an exception as strings cannot be divided. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform division on string and number. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+	}
+	public: void operator/=(var &v){
+		/* This function overloads the /= operator. This function checks if both the type variables of THIS object and the object passed are of type _INT, then the value in THIS object is divided by 'v.val.d'. If they are of type _STR, then an exception is thrown. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT) val.d/=v.val.d;
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: performing division on string and number is not possible. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+	}
+	
+	public: void operator%=(double num){
+		/*This function overloads the %= operator. This function divides the double value of THIS object by 'num' and stores the remainder in THIS object. If the type of THIS object is not a _INT, an exception is thrown.*/
+			try{
+				if(type==_STR) throw 1;
+				else if(type==_INT){
+					long num1=val.d, num2=num;
+					val.d=num1%num2;
+				}
+			} catch (int exception){
+				cout<<"error: cannot perform division on string and number. Also, make sure that both variables are initialised.\n";
+			}
+	}
+	public: void operator%=(const char* string){
+		/* This function overloads the %= operator. This function throws only an exception as strings cannot be divided. If the type of THIS object is not a _STR, an exception is thrown. */
+			try{
+				if(type==_INT) throw 1;
+				else if(type==_STR) throw 2;
+			} catch (int exception){
+				if(exception==1) cout<<"error: cannot perform division on string and number. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+	}
+	public: void operator%=(var &v){
+		/* This function overloads the %= operator. This function checks if both the type variables of THIS object and the object passed are of type _INT, then the value in THIS object is divided by 'v.val.d' and the remainder is stored in val.d. If they are of type _STR, then an exception is thrown. */
+			try{
+				if(type==v.Type()){
+					if(type==_INT){
+						long num1=val.d, num2=v.val.d;
+						val.d=num1%num2;
+					}
+					else if(type==_STR) throw 2;
+				}
+				else throw 1;
+			} catch (int exception){
+				if(exception==1) cout<<"error: performing division on string and number is not possible. Also, make sure that both variables are initialised.\n";
+				else if(exception==2) cout<<"error: cannot perform division on two strings\n";
+			}
+	}
+	
+	public: char operator[](int index){
+		/* This function overloads the [] operator. The character at the specified index of 'val.c' is returned. If the index is out of bounds, an exception is thrown. */
+			try{
+				if(type==_INT) throw 2;
+				else if(type==_STR){
+					if(index<length(val.c) && index>=0) return val.c[index];
+					else throw 1;
+				}
+			} catch (int exception){
+				if(exception==1) cout<<"error: index out of bounds for '[]' operator\n";
+				else if(exception==2) cout<<"error: [] operator cannot function for 'var' of type 'number'\n";
+			}
+			return '\0';
+	}
+	
+	public: friend ostream &operator<<(ostream &o, var &v);
+	public: friend istream &operator>>(istream &i, var &v);
+	
 };
 
-ostream &operator<<(ostream &o, var var1){
-	if(var1.type==1||var1.type==2){
-		o<<var1.string;
+ostream &operator<<(ostream &o, var &v){
+	/* If type is _INT, the double is printed. If _STR, the string is printed. */
+		if(v.type==_INT) o<<v.val.d;
+		else if(v.type==_STR) o<<v.val.c;
 		return o;
-	}
-	else if(var1.type==3){
-		o<<var1.floating;
-		return o;
-	}
-	else if(var1.type==4){
-		o<<var1.longfloat;
-		return o;
-	}
-	else if(var1.type==5){
-		o<<var1.number;
-		return o;
-	}
-	else if(var1.type==6){
-		o<<var1.longint;
-		return o;
-	}
-	else return o;
 }
-istream &operator>>(istream &i, var &var1){
-	var1.type=1;
-	if(var1.allocated==1){
-		delete var1.string;
-		var1.allocated=0;
-	}
-	var1.allocated=1;
-	var1.string=new char[50];
+istream &operator>>(istream &i, var &v){
+	/* This overloads the input stream >> operator. First, allocated memory, if any, is freed and all defaults are restored. The string is analysed in the getType() function and if it is an _INT, it is stored in the double after conversion and if it is a _STR, it is copied into the char array. */
+		v.setDefaultsAndFree();
+		char* string=new char[STR_SIZE];
+		i>>string;
 	
-	i>>var1.string;
-	
-	var1.input(var1.string);
-	
-	return i;
+		if(v.getType(string)==_INT){
+			v.type=_INT;
+			v.val.d=v.getNum(string);
+		}
+		else{
+			v.type=_STR;
+			v=string;
+		}
+		delete[] string;
+		return i;
 }

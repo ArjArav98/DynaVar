@@ -18,12 +18,12 @@ or
 * IDE supporting C++ (Dev C++, Xcode, Turbo C++)
 
 ### Installation
-1. Download the contents of the 'DynaVar-Headers' folder. There should be a file titled ```var.h```.
-2. Move these files to the directory in which your C++ file or ```.cpp``` file is located.
-3. At the starting of your file, include the ```var.h``` header file. 
+1. Download or clone this repository onto your computer. There should be a file named ```dynavar.h``` inside the folder.
+2. Move this file to the directory in which your C++ file or ```.cpp``` file is located.
+3. At the starting of your file, include the ```dynavar.h``` header file. 
 ```
 #include<iostream>
-#include"var.h"
+#include"dynavar.h"
 .....
 ````
 Like that^.
@@ -34,7 +34,7 @@ Like that^.
 ```
 //To check whether a number is even or odd
 
-#include"var.h"
+#include"dynavar.h"
 
 int main(){
 	var num;
@@ -52,7 +52,7 @@ int main(){
 ```
 //To print all numbers divisible by 3 upto a given limit
 
-#include"var.h"
+#include"dynavar.h"
 
 int main(){
 	var limit;
@@ -72,7 +72,7 @@ int main(){
 ```
 //To check whether two given names are equal or not
 
-#include"var.h"
+#include"dynavar.h"
 
 int main(){
 	var name1, name2;

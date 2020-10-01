@@ -88,7 +88,7 @@ int main(){
 	return 0;
 }
 ```
-These are a few sample programs to give a basic understanding of how the ```var``` object might work. For full documentation, see the wiki.
+These are a few sample programs to give a basic understanding of how the ```var``` object might work. For full documentation, see the wiki (still in progress).
 
 ### Built With
 * [Textmate](https://macromates.com/)
